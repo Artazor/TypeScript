@@ -3023,5 +3023,13 @@
     "Unknown typing option '{0}'.": {
         "category": "Error",
         "code": 17010
+    },
+    "This modifier is not allowed for a local class.": {
+        "category": "Error",
+        "code": 18500
+    },
+    "Cannot create an instance of the abstract anonymous class.": {
+        "category": "Error",
+        "code": 18501
     }
 }

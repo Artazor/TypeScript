@@ -4003,6 +4003,7 @@ namespace ts {
                     }
 
                     return parseFunctionExpression();
+                case SyntaxKind.AbstractKeyword:
                 case SyntaxKind.ClassKeyword:
                     return parseClassExpression();
                 case SyntaxKind.FunctionKeyword:
@@ -5181,11 +5182,10 @@ namespace ts {
         }
 
         function parseClassExpression(): ClassExpression {
-            return <ClassExpression>parseClassDeclarationOrExpression(
-                /*fullStart*/ scanner.getStartPos(),
-                /*decorators*/ undefined,
-                /*modifiers*/ undefined,
-                SyntaxKind.ClassExpression);
+            const fullStart = scanner.getStartPos();
+            const decorators: NodeArray<Decorator> = undefined; // probably need to use parseDecorators()
+            const modifiers = parseModifiers();
+            return <ClassExpression>parseClassDeclarationOrExpression(fullStart, decorators, modifiers, SyntaxKind.ClassExpression);
         }
 
         function parseClassDeclaration(fullStart: number, decorators: NodeArray<Decorator>, modifiers: ModifiersArray): ClassDeclaration {

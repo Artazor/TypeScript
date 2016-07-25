@@ -11477,12 +11477,17 @@ namespace ts {
             }
 
             // If the expression is a class of abstract type, then it cannot be instantiated.
-            // Note, only class declarations can be declared abstract.
+            // Note, only class expression or declarations can be declared abstract.
             // In the case of a merged class-module or class-interface declaration,
             // only the class declaration node will have the Abstract flag set.
             const valueDecl = expressionType.symbol && getClassLikeDeclarationOfSymbol(expressionType.symbol);
             if (valueDecl && valueDecl.flags & NodeFlags.Abstract) {
-                error(node, Diagnostics.Cannot_create_an_instance_of_the_abstract_class_0, declarationNameToString(valueDecl.name));
+                if (valueDecl.name === undefined) {
+                    // Anonymous abstract class expression
+                    error(node, Diagnostics.Cannot_create_an_instance_of_the_abstract_anonymous_class);                    
+                } else {
+                    error(node, Diagnostics.Cannot_create_an_instance_of_the_abstract_class_0, declarationNameToString(valueDecl.name));
+                }
                 return resolveErrorCall(node);
             }
 
@@ -18292,7 +18297,19 @@ namespace ts {
                         return grammarErrorOnFirstToken(node, Diagnostics.Modifiers_cannot_appear_here);
                     }
                     break;
+                case SyntaxKind.ClassExpression:
                 case SyntaxKind.ClassDeclaration:
+                    if (node.modifiers && (node.modifiers.length > 1 || node.modifiers[0].kind !== SyntaxKind.AbstractKeyword) &&
+                        node.parent.kind !== SyntaxKind.ModuleBlock && node.parent.kind !== SyntaxKind.SourceFile) {
+                        const culpritIndex = node.modifiers[0].kind === SyntaxKind.AbstractKeyword ? 1 : 0;
+                        const culpritModifier = node.modifiers[culpritIndex];
+                        if (culpritModifier.kind === SyntaxKind.AbstractKeyword) {
+                            return grammarErrorOnFirstToken(culpritModifier, Diagnostics._0_modifier_already_seen, "abstract");
+                        } else {
+                            return grammarErrorOnFirstToken(culpritModifier, Diagnostics.This_modifier_is_not_allowed_for_a_local_class);
+                        }
+                    }
+                    break;
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.VariableStatement:
                 case SyntaxKind.TypeAliasDeclaration:
@@ -18450,14 +18467,14 @@ namespace ts {
                         if (flags & NodeFlags.Abstract) {
                             return grammarErrorOnNode(modifier, Diagnostics._0_modifier_already_seen, "abstract");
                         }
-                        if (node.kind !== SyntaxKind.ClassDeclaration) {
+                        if (node.kind !== SyntaxKind.ClassDeclaration && node.kind !== SyntaxKind.ClassExpression) {
                             if (node.kind !== SyntaxKind.MethodDeclaration &&
                                 node.kind !== SyntaxKind.PropertyDeclaration &&
                                 node.kind !== SyntaxKind.GetAccessor &&
                                 node.kind !== SyntaxKind.SetAccessor) {
                                 return grammarErrorOnNode(modifier, Diagnostics.abstract_modifier_can_only_appear_on_a_class_method_or_property_declaration);
                             }
-                            if (!(node.parent.kind === SyntaxKind.ClassDeclaration && node.parent.flags & NodeFlags.Abstract)) {
+                            if (!((node.parent.kind === SyntaxKind.ClassDeclaration || node.parent.kind === SyntaxKind.ClassExpression) && node.parent.flags & NodeFlags.Abstract)) {
                                 return grammarErrorOnNode(modifier, Diagnostics.Abstract_methods_can_only_appear_within_an_abstract_class);
                             }
                             if (flags & NodeFlags.Static) {
